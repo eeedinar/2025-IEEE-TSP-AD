@@ -1,0 +1,792 @@
+# ============================================================================
+# ML Classification Framework Configuration
+# ============================================================================
+# Version: 5.0.0
+# ============================================================================
+
+# ============================================================================
+# DATA CONFIGURATION
+# ============================================================================
+data:
+  # # Option 1: Multiple class files
+  # data:
+  #   train_files:
+  #     0: 'data/class0.txt'
+  #     1: 'data/class1.txt'
+  #     skip_rows: 0
+
+  # # Option 2: Named classes
+  # data:
+  #   train_files:
+  #     tissue: 'data/tissue.csv'
+  #     cross: 'data/cross.csv'
+  #     skip_rows: 1
+
+  # # Option 3: Single file with labels
+  # data:
+  #   train_files:
+  #     file: 'data/all_training.csv'
+  #     label_column: 'class'  # or use column index: 2
+  #     skip_rows: 1
+
+  # # With labels
+  # data:
+  #   inference_files:
+  #     files: ['data/test.csv']
+  #     label_column: 'class'
+  #     skip_rows: 1
+
+  # # Without labels
+  # data:
+  #   inference_files:
+  #     files: 'data/test.csv'
+  #     skip_rows: 1    
+  
+  # Input Data Files (relative to project root)
+  train_files:
+    0: 'data/I_tissue_div_data.txt'
+    1: 'data/I_cross_data.txt'
+    skip_rows: 0  # 1 to skip the header line - 0 - read all data
+  
+  # Feature Metadata (e.g., q-values for SAXS/WAXS data)
+  feature_indices_file: 'data/q_data.txt'  # Set to null if not available
+
+  # ---------------------------------------------------------------------------
+  # Feature Range Selection
+  # ---------------------------------------------------------------------------
+  feature_range:
+    enabled: true
+    min_value: 0.4   # Minimum value (q-value or index)
+    max_value: 1.45  # Maximum value (q-value or index)
+  
+  # ---------------------------------------------------------------------------
+  # Multicollinearity Analysis
+  # ---------------------------------------------------------------------------
+  multicollinearity:
+    enabled: true
+    correlation_threshold: 0.989
+    min_features: 1
+    combination_method: 'union'  # Options: 'union', 'intersection'
+    
+  # ---------------------------------------------------------------------------
+  # NMF (Non-negative Matrix Factorization)
+  # ---------------------------------------------------------------------------
+  nmf:
+    enabled: false
+    n_components: 11  # auto, integer, or list of integers
+    max_iter: 10000
+    tolerance: 1e-4
+    init: 'nndsvd'
+    
+  # ---------------------------------------------------------------------------
+  # Feature Scaling
+  # ---------------------------------------------------------------------------
+  scaling:
+    enabled: true
+    scaler_type: 'standard'  # Options: 'standard', 'minmax', 'robust'
+  
+  # ---------------------------------------------------------------------------
+  # Data Splitting
+  # ---------------------------------------------------------------------------
+  test_size: 0.2
+  validation_size: 0.2
+  random_state: 30
+  stratify: false
+  split_strategy: 'train_val_test'  # Options: 'train_test', 'train_val_test'
+  
+  # ---------------------------------------------------------------------------
+  # Imbalanced Data Handling
+  # ---------------------------------------------------------------------------
+  handle_imbalance: null  # Options: 'smote', 'adasyn', 'undersample', 'smote_tomek', null
+
+# ============================================================================
+# LOSS FUNCTIONS CONFIGURATION
+# ============================================================================
+losses:    
+  weighted_cross_entropy:
+    type: WeightedCrossEntropyLoss
+    weight: auto   # Class weights [Class 0, Class 1] [3.29, 1.0] auto
+    reduction: mean
+    label_smoothing: 0.0
+
+  balanced_cross_entropy:
+    beta: 0.999
+    reduction: mean
+    
+  focal_loss:
+    type: UnifiedFocalLoss
+    alpha: auto   # Manual weights for imbalanced classes  auto 2 etc.
+    gamma: 2.0             # Higher focusing
+    reduction: mean
+    binary: false
+
+  dice_loss:
+    smooth: 0.001
+    reduction: mean
+    
+  center_loss:
+    type: CenterLoss
+    alpha: 0.5
+
+  contrastive_center_loss:
+    lambda_c: 0.5
+    margin: 1.0
+
+  ring_loss:
+    radius: 1.0
+    weight: 0.01
+
+  combined_focal_dice:
+    type: CombinedLoss
+    losses:
+      - type: UnifiedFocalLoss
+        alpha: auto   # Manual weights for imbalanced classes  auto 2 etc.
+        gamma: 2.0             # Higher focusing
+        reduction: mean
+        binary: false
+      - type: DiceLoss
+        smooth: 0.0001
+        reduction: mean
+    weights: [0.6, 0.4]        # 80% focal loss, 20% dice loss
+
+  combined_focal_dice_contrastive:
+    type: CombinedLoss
+    losses:
+      - type: UnifiedFocalLoss
+        alpha: auto   # Manual weights for imbalanced classes  auto 2 etc.
+        gamma: 2.0             # Higher focusing
+        reduction: mean
+        binary: false
+      - type: DiceLoss
+        smooth: 0.0001
+        reduction: mean
+      - type: ContrastiveCenterLoss
+        alpha: 0.5     # 0.8 importance on new mean          class_center = class_features.mean(dim=0)    self.centers[class_idx] = (1 - self.alpha) * self.centers[class_idx] + self.alpha * class_center
+        lambda_c: 0.3  # 0.3 importance on contrastive_loss    self.lambda_c * center_loss + (1 - self.lambda_c) * contrastive_loss
+        margin: 0.1
+    weights: [0.6, 0.2, 0.2]
+
+# ============================================================================
+# OPTIMIZER CONFIGURATIONS
+# ============================================================================
+optimizers:
+  adam:
+    type: Adam
+    betas: [0.9, 0.999]
+    eps: 1e-8
+    weight_decay: 0
+    amsgrad: false
+
+  adamW:
+    type: AdamW
+    betas: [0.9, 0.999]
+    eps: 1e-8
+    weight_decay: 0.01
+    amsgrad: false
+
+  adam_custom:
+    type: Adam
+    betas: [0.9, 0.999]
+    eps: 1e-8
+    weight_decay: 0.001
+    amsgrad: false
+
+  sgd:
+    type: SGD
+    momentum: 0.9
+    dampening: 0
+    weight_decay: 0
+    nesterov: true
+
+  rmsprop:
+    type: RMSprop
+    alpha: 0.99
+    eps: 1e-8
+    weight_decay: 0
+    momentum: 0
+    centered: false
+    
+  adagrad:
+    type: Adagrad
+    lr_decay: 0
+    weight_decay: 0
+    eps: 1e-10
+
+# ============================================================================
+# LEARNING RATE SCHEDULERS
+# ============================================================================
+schedulers:
+  step_lr:
+    type: StepLR
+    step_size: 30
+    gamma: 0.1
+
+  multi_step_lr:
+    type: MultiStepLR
+    milestones: [100, 150]
+    gamma: 0.1
+
+  exponential_lr:
+    type: ExponentialLR
+    gamma: 0.95
+
+  cosine_annealing_lr:
+    type: CosineAnnealingLR
+    T_max: 50
+    eta_min: 0
+    
+  reduce_lr_on_plateau:
+    type: ReduceLROnPlateau
+    mode: min
+    factor: 0.1
+    patience: 1000
+    threshold: 0.0001
+    threshold_mode: rel
+    cooldown: 0
+    min_lr: 0
+    eps: 1e-8
+
+# ============================================================================
+# MODEL CONFIGURATIONS
+# ============================================================================
+models:
+  # ---------------------------------------------------------------------------
+  # Classical Models
+  # ---------------------------------------------------------------------------
+  logistic_regression:
+    enabled: false
+    max_iter: 1000
+    solver: lbfgs
+    class_weight: balanced
+    
+  svm:
+    enabled: false
+    kernel: rbf
+    C: 1.0
+    gamma: scale
+    probability: true
+    class_weight: balanced
+    
+  svm_linear:
+    enabled: false
+    kernel: linear
+    C: 1.0
+    probability: true
+    class_weight: balanced
+    
+  svm_poly:
+    enabled: false
+    kernel: poly
+    degree: 3
+    C: 1.0
+    gamma: scale
+    probability: true
+    class_weight: balanced
+    
+  naive_bayes:
+    enabled: false
+    var_smoothing: 1e-9
+    
+  knn:
+    enabled: false
+    n_neighbors: 5
+    weights: uniform
+    algorithm: auto
+    metric: minkowski
+    p: 2
+
+  knn_weighted:
+    enabled: false
+    n_neighbors: 7
+    weights: distance
+    algorithm: auto
+    metric: minkowski
+    p: 2
+
+  knn_large:
+    enabled: false
+    n_neighbors: 11
+    weights: uniform
+    algorithm: auto
+    metric: minkowski
+    p: 2
+
+  kmeans:
+    enabled: false
+    n_clusters: 2
+    init: k-means++
+    n_init: 10
+    max_iter: 300
+    tol: 0.0001
+    
+  random_forest:
+    enabled: false
+    n_estimators: 100
+    max_depth: null
+    min_samples_split: 2
+    min_samples_leaf: 1
+    class_weight: balanced
+    
+  gradient_boosting:
+    enabled: false
+    n_estimators: 100
+    learning_rate: 0.1
+    max_depth: 3
+    subsample: 1.0
+    
+  xgboost:
+    enabled: false
+    n_estimators: 100
+    max_depth: 6
+    learning_rate: 0.3
+    objective: binary:logistic
+    use_label_encoder: false
+    eval_metric: logloss
+    
+  lightgbm:
+    enabled: false
+    boosting_type: gbdt
+    num_leaves: 31
+    max_depth: -1
+    learning_rate: 0.05
+    n_estimators: 100
+    objective: binary
+    class_weight: balanced
+
+  # ---------------------------------------------------------------------------
+  # Neural Networks
+  # ---------------------------------------------------------------------------
+  neural_network_focal:
+    enabled: false
+    hidden_dims: [32, 16, 8, 4]
+    epochs: 1000
+    batch_size: 32
+    learning_rate: 0.001
+    dropout: 0.3
+    focal_alpha: 0.76
+    focal_gamma: 2.0
+    loss: weighted_focal_loss
+    optimizer: adamW
+    scheduler: cosine_annealing_lr
+    early_stopping:
+      enabled: true
+      patience: 50
+      min_delta: 0.0001
+      restore_best_weights: true
+
+  neural_network_weighted_cross_entropy:
+    enabled: true
+    epochs: 10000
+    batch_size: 1024
+    learning_rate: 0.005
+    dropout: 0.3
+    loss: weighted_cross_entropy  
+    optimizer: adam_custom
+    scheduler: cosine_annealing_lr
+    early_stopping:
+      enabled: true
+      patience: 500
+      min_delta: 0.0001
+      restore_best_weights: true
+    model_selection:
+      monitor: val_f1
+
+  neural_network_focal_loss:
+    enabled: true
+    epochs: 10000
+    batch_size: 1024
+    learning_rate: 0.005
+    dropout: 0.3
+    loss: focal_loss   
+    optimizer: adam_custom
+    scheduler: cosine_annealing_lr
+    early_stopping:
+      enabled: true
+      patience: 500
+      min_delta: 0.0001
+      restore_best_weights: true
+    model_selection:
+      monitor: val_f1
+
+  neural_network_combined_focal_dice:
+    enabled: true
+    epochs: 10000
+    batch_size: 1024
+    learning_rate: 0.005
+    dropout: 0.3
+    loss: combined_focal_dice
+    optimizer: adam_custom
+    scheduler: cosine_annealing_lr
+    early_stopping:
+      enabled: true
+      patience: 2000
+      min_delta: 0.0001
+      restore_best_weights: true
+    model_selection:
+      monitor: val_f1
+
+  contrastive_nn_combined_focal_dice_contrastive:
+    enabled: true
+    epochs: 10000
+    batch_size: 1024
+    learning_rate: 0.005
+    dropout: 0.3
+    loss: combined_focal_dice_contrastive
+    optimizer: adam_custom
+    scheduler: cosine_annealing_lr
+    early_stopping:
+      enabled: true
+      patience: 2000
+      min_delta: 0.0001
+      restore_best_weights: true
+    model_selection:
+      monitor: val_f1
+
+  nmf_simclr:
+    enabled: false
+    hidden_dims: [8]  # Can customize
+    epochs: 20000
+    batch_size: 1024
+    learning_rate: 0.005
+    dropout: 0.3
+    # Loss-specific parameters
+    focal_alpha: auto
+    focal_gamma: 2.0
+    dice_smooth: 0.001
+    center_alpha: 0.5
+    contrastive_margin: 0.1
+    contrastive_lambda: 0.3
+    loss_weights: [0.7, 0.2, 0.1]  # [focal, dice, center] [0.7, 0.2, 0.01] [0.09]
+    cross_modal_weight: 0.1
+    temperature: 0.5
+    
+    optimizer: adam_custom
+    scheduler: cosine_annealing_lr # cosine_annealing_lr  reduce_lr_on_plateau
+    early_stopping:
+      enabled: true
+      patience: 2000
+      min_delta: 0.0001
+      restore_best_weights: true
+    model_selection:
+      monitor: val_f1
+  
+  mlp:
+    enabled: false
+    hidden_layer_sizes: [100, 50]
+    activation: relu
+    solver: adam
+    alpha: 0.0001
+    batch_size: auto
+    learning_rate: constant
+    learning_rate_init: 0.001
+    max_iter: 1000
+    early_stopping: true
+    validation_fraction: 0.1
+    n_iter_no_change: 10
+
+  # ---------------------------------------------------------------------------
+  # Transformer Models
+  # ---------------------------------------------------------------------------
+  transformer:
+    enabled: false
+    d_model: 64
+    nhead: 4
+    num_layers: 2
+    dim_feedforward: 256
+    dropout: 0.1
+    epochs: 500
+    batch_size: 32
+    learning_rate: 0.0005
+    loss: weighted_cross_entropy
+    optimizer: adam
+    scheduler: reduce_lr_on_plateau
+    early_stopping:
+      enabled: true
+      patience: 30
+      min_delta: 0.0001
+      restore_best_weights: true
+  
+  # ---------------------------------------------------------------------------
+  # Graph Neural Networks
+  # ---------------------------------------------------------------------------
+  gnn:
+      enabled: false
+      hidden_dim: 128  # Increased capacity
+      epochs: 5130
+      batch_size: 512  # Smaller batch for better gradient estimates
+      learning_rate: 0.0005  # Much lower - your current 0.005 is too high
+      loss: weighted_cross_entropy
+      optimizer: adam_custom
+      scheduler: 
+        type: ReduceLROnPlateau
+        factor: 0.5  # Reduce LR by half
+        patience: 100  # Reduce LR faster
+        min_lr: 0.00001
+      dropout: 0.35  # Moderate dropout
+      early_stopping:
+        enabled: true
+        patience: 500  # Shorter patience since model converges early
+        min_delta: 0.0001
+        restore_best_weights: true
+      model_selection:
+        enabled: true
+        monitor: val_f1
+  
+  # ---------------------------------------------------------------------------
+  # Advanced Models
+  # ---------------------------------------------------------------------------
+  advanced_contrastive:
+    enabled: false
+    hidden_dim: 128
+    embed_dim: 16
+    dropout_rate: 0.3
+    use_attention: true
+    use_conv: true
+    conv_channels: [32, 64, 128]
+    use_contrastive: true
+    contrastive_weight: 0.1
+    epochs: 500
+    batch_size: 32
+    learning_rate: 0.001
+    loss: combined_loss_config
+    optimizer: adam_custom
+    scheduler: cosine_annealing_lr
+
+  physics_informed:
+    enabled: false
+    hidden_dim: 256
+    epochs: 500
+    batch_size: 32
+    learning_rate: 0.001
+    loss: weighted_cross_entropy
+    optimizer: adam
+    scheduler: exponential_lr
+    physics_config:
+      use_guinier_constraint: true
+      use_porod_constraint: true
+      physics_loss_weight: 0.1
+    early_stopping:
+      enabled: true
+      patience: 30
+      min_delta: 0.0001
+      restore_best_weights: true
+    
+  # ---------------------------------------------------------------------------
+  # Ensemble Models
+  # ---------------------------------------------------------------------------
+  voting_ensemble:
+    enabled: false
+    estimators:
+      - ['lr', 'logistic_regression']
+      - ['svm', 'svm']
+      - ['rf', 'random_forest']
+    voting: soft
+    weights: null
+
+  stacking_ensemble:
+    enabled: false
+    estimators:
+      - ['lr', 'logistic_regression']
+      - ['svm', 'svm']
+      - ['rf', 'random_forest']
+      - ['nn', 'neural_network']
+    final_estimator: logistic_regression
+    cv: 5
+    stack_method: auto
+    passthrough: false
+
+  bagging_ensemble:
+    enabled: false
+    base_estimator: null  # Will use decision tree
+    n_estimators: 10
+    max_samples: 1.0
+    max_features: 1.0
+    bootstrap: true
+    bootstrap_features: false
+
+  adaboost:
+    enabled: false
+    base_estimator: null  # Will use decision tree
+    n_estimators: 50
+    learning_rate: 1.0
+    algorithm: SAMME.R
+
+# ============================================================================
+# TRAINING CONFIGURATION
+# ============================================================================
+training:
+  # Cross-validation settings
+  cross_validation:
+    enabled: true
+    n_folds: 5
+    stratify: false
+
+  # Model selection
+  model_selection:
+    enabled: true
+    metric: val_f1 # Options: val_loss, val_f1, train_loss 
+
+  # Early stopping (global setting, can be overridden per model)
+  early_stopping:
+    enabled: true
+    patience: 1000
+    min_delta: 0.0001
+    restore_best_weights: true
+
+  # Gradient clipping
+  gradient_clipping:
+    enabled: false
+    max_norm: 1.0
+
+  # Threshold analysis
+  optimize_threshold:
+    enabled: true
+    metric: f1   # Options: f1, accuracy, balanced_accuracy
+    thresholds: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
+# ============================================================================
+# ADVANCED TRAINING STRATEGIES
+# ============================================================================
+advanced_training:
+  # Curriculum learning
+  curriculum_learning:
+    enabled: false
+    strategy: easy_to_hard
+    stages: 5
+    
+  # Knowledge distillation
+  knowledge_distillation:
+    enabled: false
+    teacher_model: null
+    temperature: 3.0
+    alpha: 0.7
+
+# ============================================================================
+# EVALUATION CONFIGURATION
+# ============================================================================
+evaluation:
+  # Metrics to compute
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
+    - auc
+    - auprc
+    - matthews_corrcoef
+    - balanced_accuracy
+    - auprc
+    - cohen_kappa
+
+  # # Class-specific metrics
+  # class_metrics:
+  #   enabled: true
+  #   average: macro  # Options: 'micro', 'macro', 'weighted'
+    
+  # # Confidence intervals
+  # confidence_intervals:
+  #   enabled: false
+  #   method: bootstrap
+  #   n_bootstraps: 1000
+  #   confidence_level: 0.95
+
+# ============================================================================
+# VISUALIZATION CONFIGURATION
+# ============================================================================
+visualization:
+  create_report: true
+  save_plots: true
+  show_plots: false  # Don't display plots during training
+  plot_format: png
+  dpi: 300
+  
+  # Plots to generate
+  plots:
+    # Model performance plots
+    - model_comparison
+    - confusion_matrix
+    - roc_curve
+    - precision_recall_curve
+    - threshold_analysis
+    - learning_curves
+    - performance_by_category
+    
+    # Preprocessing plots (automatically generated)
+    - feature_selection
+    - multicollinearity_heatmap
+    - nmf_rank_selection
+    - preprocessing_summary
+    
+    # Additional analysis plots
+    - feature_importance
+    - error_analysis
+    - prediction_distribution
+    - calibration_curve
+
+# ============================================================================
+# OUTPUT CONFIGURATION
+# ============================================================================
+output:
+  save_models: true
+  save_results: true
+  save_preprocessing_artifacts: true
+  results_format: 'both'  # Options: 'json', 'csv', 'both'
+  output_dir: 'results'
+  
+  # Organized directory structure
+  create_subdirectories: true
+  subdirectories:
+    - models
+    - preprocessing
+    - metadata
+    - results
+    - plots
+    - configs
+    - logs
+
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
+logging:
+  level: INFO  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  date_format: '%Y-%m-%d %H:%M:%S'
+  
+  # Console logging
+  console_output: true
+  console_level: INFO
+  
+  # File logging
+  save_to_file: true
+  file_level: DEBUG
+  log_dir: 'logs'
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+  
+  # Model-specific logging
+  log_model_architecture: true
+  log_training_progress: true
+  log_batch_metrics: false  # Can be verbose
+  
+  # Performance logging
+  log_memory_usage: false
+  log_gpu_usage: false
+  log_timing: true
+
+# ============================================================================
+# RESOURCE MANAGEMENT
+# ============================================================================
+resources:
+  # CPU settings
+  n_jobs: -1  # Number of parallel jobs (-1 for all cores)
+  
+  # GPU settings
+  gpu_enabled: true
+  gpu_id: 0  # Which GPU to use
+  
+  # Batch processing
+  batch_size_inference: 1000  # Batch size for inference
+  
+  # Caching
+  enable_caching: true
+  cache_dir: '.cache'

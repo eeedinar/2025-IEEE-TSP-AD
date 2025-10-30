@@ -1,0 +1,56 @@
+{
+  "experiment": {
+    "name": "config_0.991_20250718_180804",
+    "timestamp": "2025-07-18T18:48:41.569753",
+    "config_file": "config_0.991.yaml",
+    "random_seed": 30,
+    "framework_version": "10.0.0"
+  },
+  "data": {
+    "preprocessing_stages": [
+      {
+        "name": "feature_range",
+        "features_in": 690,
+        "features_out": 211
+      },
+      {
+        "name": "multicollinearity",
+        "features_in": 211,
+        "features_out": 14
+      },
+      {
+        "name": "scaling",
+        "features_in": 14,
+        "features_out": 14
+      }
+    ],
+    "final_features": 14
+  },
+  "models": {
+    "trained": [
+      "neural_network_weighted_cross_entropy",
+      "neural_network_focal_loss",
+      "neural_network_combined_focal_dice",
+      "contrastive_nn_combined_focal_dice_contrastive"
+    ],
+    "best_model": "neural_network_weighted_cross_entropy",
+    "failed": []
+  },
+  "model_selection": {
+    "metric": "val_f1",
+    "mode": "max"
+  },
+  "preprocessing": {
+    "components": {
+      "metadata": "preprocessing_metadata.json"
+    },
+    "state_file": "preprocessing_state.pkl"
+  },
+  "paths": {
+    "models": "models/",
+    "preprocessing": "preprocessing/",
+    "results": "results/",
+    "plots": "plots/",
+    "configs": "configs/"
+  }
+}
