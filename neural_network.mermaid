@@ -1,0 +1,55 @@
+graph LR
+    %% Input Signal
+    Input["<b>Input Signal</b><br/><i>X ∈ ℝ<sup>B×m</sup></i><br/><span style='font-size:0.8em'>m=11</span>"]:::input
+    
+    %% Dimension Expansion
+    Input --> Expand["<b>Ξ</b><br/><i>X' ∈ ℝ<sup>B×1×m</sup></i>"]:::operation
+    
+    %% Convolutional Feature Extraction with vertical filters
+    Expand --> Conv1{" "}:::convLayer
+    Expand --> Conv2{" "}:::convLayer
+    Expand --> Conv3{" "}:::convLayer
+    Expand --> Conv4{" "}:::convLayer
+    Conv1 --> ConvOut(" "):::hidden
+    Conv2 --> ConvOut
+    Conv3 --> ConvOut
+    Conv4 --> ConvOut
+    
+    ConvLabel["<b>𝒞<sub>κ</sub></b><br/><i>C<sub>in</sub>=1, C<sub>out</sub>=4</i><br/><i>k=3, s=1, p=0</i><br/><span style='font-size:0.85em'>κ ∈ ℝ<sup>4×1×3</sup>, b ∈ ℝ<sup>4</sup></span>"]:::label
+    ConvOut -.-> ConvLabel
+    
+    %% Feature Transformation
+    ConvOut --> FC1["<b>ℒ<sub>1</sub></b><br/><i>W<sub>1</sub> ∈ ℝ<sup>4×36</sup>, b<sub>1</sub> ∈ ℝ<sup>4</sup></i><br/><span style='font-size:0.85em'>Θ = 148</span>"]:::fcLayer
+    
+    FC1Ops["<b>σ<sub>L</sub></b>: <i>f(x) = max(αx, x), α = 0.01</i><br/><b>vec</b>: <i>Z ∈ ℝ<sup>B×36</sup></i>"]:::opsLabel
+    FC1 -.-> FC1Ops
+    
+    %% Classification Head
+    FC1 --> Classifier["<b>ℒ<sub>c</sub></b><br/><i>W<sub>c</sub> ∈ ℝ<sup>2×4</sup>, b<sub>c</sub> ∈ ℝ<sup>2</sup></i><br/><span style='font-size:0.85em'>Θ = 10</span>"]:::fcLayer
+    
+    ClassOps["<b>σ<sub>L</sub></b>: <i>f(x) = max(αx, x), α = 0.01</i><br/><b>𝒟<sub>p</sub></b>: <i>Bernoulli(1-p), p = 0.3</i>"]:::opsLabel
+    Classifier -.-> ClassOps
+    
+    %% Output Logits
+    Classifier --> Output["<b>Output Logits</b><br/><i>Ŷ ∈ ℝ<sup>B×C</sup></i><br/><span style='font-size:0.8em'>C=2</span>"]:::output
+    
+    %% Network Summary
+    Summary["<b>f<sub>θ</sub> = ℒ<sub>c</sub> ∘ 𝒟<sub>p</sub> ∘ σ<sub>L</sub> ∘ ℒ<sub>1</sub> ∘ vec ∘ σ<sub>L</sub> ∘ 𝒞<sub>κ</sub> ∘ Ξ</b><br/>━━━━━━━━━━━━━━━<br/><b>Θ<sub>total</sub> = 174</b><br/><i>All parameters trainable</i>"]:::summary
+    FC1 -.-> Summary
+    
+    %% Hidden state annotations
+    H1["<i>H<sub>1</sub> ∈ ℝ<sup>B×4×9</sup></i>"]:::dimAnnot
+    H2["<i>H<sub>2</sub> ∈ ℝ<sup>B×4</sup></i>"]:::dimAnnot
+    ConvOut -.-> H1
+    FC1 -.-> H2
+    
+    classDef input fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#1e1b4b,font-weight:normal
+    classDef convLayer fill:#ec4899,stroke:none,color:#fff
+    classDef hidden fill:none,stroke:none
+    classDef fcLayer fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#14532d,font-weight:normal
+    classDef operation fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e,font-weight:normal
+    classDef output fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#1e1b4b,font-weight:normal
+    classDef label fill:none,stroke:none,color:#000,font-size:10px,font-style:italic
+    classDef opsLabel fill:none,stroke:none,color:#7c2d12,font-size:9px
+    classDef summary fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#111827,font-weight:normal
+    classDef dimAnnot fill:none,stroke:none,color:#000,font-style:italic,font-size:0.85em
